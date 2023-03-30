@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
 
-#import rclpy
-from rclpy.node import Node
-from std_msgs.msg import String
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
-from smap_interfaces.msg import SmapData, SmapPrediction
-
-
 import rclpy
 import traceback
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from smap_interfaces.msg import SmapData, SmapPrediction
 
 from smap_interfaces.msg import SmapPrediction
 from smap_interfaces.srv import AddPerceptionModule
+
+import time
+from cv_bridge import CvBridge
+
+
+class timer:
+    # Timer based on https://github.com/ultralytics/yolov5/blob/master/utils/general.py
+    def __init__(self):
+        self.t = 0
+
+    def __enter__(self):
+        self.t = 0
+        self.start = time.time()
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.end = time.time()
+        self.t = (self.end - self.start)*1E3
+    
+    def reset(self):
+        self.t = 0
 
 class classification_wrapper(Node):
 
@@ -22,41 +37,50 @@ class classification_wrapper(Node):
     classes = []
     parameters = []
 
-    device=None
+    imgsz=None
     model=None
+    device=None
     model_file=None
     model_description_file=None
-    imgsz=None
 
+
+    _cv_bridge=CvBridge()
+    _img_original=None
+    _img_processed=None
+    _predictions=None
+    _callback_time=0
     __initialization_state=0
     __state_busy=False
+    
 
     def __init__(self,detector_name='Cl1',detector_type='object',detector_architecture='no_defined'):
         super().__init__("smap_perception_{}".format(detector_name))
 
         self.get_logger().info("Initializing smap wrapper...")
 
-        self.detector_name=detector_name
-        
-        self.detector_type=detector_type
-
-        self.detector_architecture=detector_architecture
-
-        self.reentrant_cb_group=ReentrantCallbackGroup()
-
-        self.__ret_valid=10
-
-        self.__shutdown_node=False
-
-        self.node_timer=self.create_timer(1.0,self.__states_next__)
-
+        # Wrapper parameters
         self.declare_parameter('model',value=None)
-
         self.declare_parameter('model_description',value=None)
 
-        self.model_file = self.get_parameter('model').value
+        # Wrapper private variables
+        self._reentrant_cb_group=ReentrantCallbackGroup()
+        self.__ret_valid=10
+        self.__shutdown_node=False
 
+        # Timer
+        self.__node_timer=self.create_timer(1.0,self.__states_next__)
+
+        # Wrapper public variables
+        self.detector_name=detector_name
+        self.detector_type=detector_type
+        self.detector_architecture=detector_architecture
+        self.model_file = self.get_parameter('model').value
         self.model_description_file = self.get_parameter('model_description').value
+
+        self.pre_processing_tim=timer()
+        self.inference_tim=timer()
+        self.nms_tim=timer()
+        self.post_processing_tim=timer()
 
     def __states_next__(self):
         # Initialization:
@@ -64,7 +88,7 @@ class classification_wrapper(Node):
         #       > setup_detector()
         #           initialize detector object
         #   __states_next__ -> 1
-        #       > add_detector()
+        #       > __add_detector__()
         #           add detector to the server
         #   __states_next__ -> 2
         #       > __validate_detector__()
@@ -83,7 +107,7 @@ class classification_wrapper(Node):
             if self.setup_detector(): # Return True when done!
                 self.__initialization_state+=1
         elif self.__initialization_state == 1:
-            if self.add_detector(): # Return True when done!
+            if self.__add_detector__(): # Return True when done!
                 self.__initialization_state+=1
         elif self.__initialization_state == 2:
             if self.__validate_detector__(): # Return True when done!
@@ -104,85 +128,6 @@ class classification_wrapper(Node):
 
         self.__state_busy=False
         
-
-    def add_detector(self): # Return True when done!
-        self.cli = self.create_client(
-            AddPerceptionModule,
-            "add_perception_module"
-        )
-        ret=10
-        self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,'add_perception_module'))
-        while not self.cli.wait_for_service(timeout_sec=1.0):
-            if ret==10:
-                self.get_logger().warning('Service not available, waiting again...')
-            else:
-                if ret==-1:
-                    self.get_logger().error("Service not available!")
-                    self.__shutdown_node=True
-                    return False
-                else:
-                    self.get_logger().warning('Service not available [{}/10], waiting again...'.format(10-ret))
-            ret=ret-1
-        self.get_logger().info("Successful connection to service \'{}\'.".format('add_perception_module'))
-
-        req=AddPerceptionModule.Request()
-        req.name=self.detector_name
-        req.type=self.detector_type
-        req.architecture=self.detector_architecture
-        self.get_logger().info("Sending request...")
-        self.fut_val=self.cli.call_async(req)
-        return True
-
-    def setup_detector(self): # Return True when done!
-
-        self.get_logger().info("Setting up detector...")
-        
-
-        # Check device
-        if self._chech_device(): # Return True when an error occurs
-            self.get_logger().fatal("Device not defined!")
-            self.__shutdown_node=True
-            return False
-        
-
-        # Load model
-        if self._load_model(): # Return True when an error occurs
-            self.get_logger().fatal("Model file not defined!")
-            self.__shutdown_node=True
-            return False
-        
-        if self._dataloader(): # Return True when an error occurs
-            self.get_logger().fatal("Dataloader Error!")
-            self.__shutdown_node=True
-            return False
-        
-        # Model Warmup
-        self._model_warmup()
-
-        self.get_logger().info('Detector setup complete.')
-
-        return True
-
-    def _chech_device(self): # Return True when an error occurs
-        if self.device is None:
-            return True
-        return False
-
-    def _load_model(self): # Return True when an error occurs
-        if (self.model_file is None):
-            return True
-        if (self.model_description_file is None):
-            return True
-        self.get_logger().info("Loading Model {}\n{}...".format(self.model_file,self.model_description_file))
-        return False
-    
-    def _model_warmup(self):
-        self.get_logger().info('Model warming up...')
-
-    def _dataloader(self):
-        self.get_logger().info('Initializing dataloader...')
-        return False
-
     def __validate_detector__(self): # Return True when done!
         #self.__ret_valid=10
         if self.fut_val.done():
@@ -216,30 +161,124 @@ class classification_wrapper(Node):
         self.module_id=resp.module_id
 
         return True
+
+    def __add_detector__(self): # Return True when done!
+        """Send a request to the server to include a new perception module"""
+        self.cli = self.create_client(
+            AddPerceptionModule,
+            "add_perception_module"
+        )
+        ret=10
+        self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,'add_perception_module'))
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            if ret==10:
+                self.get_logger().warning('Service not available, waiting again...')
+            else:
+                if ret==-1:
+                    self.get_logger().error("Service not available!")
+                    self.__shutdown_node=True
+                    return False
+                else:
+                    self.get_logger().warning('Service not available [{}/10], waiting again...'.format(10-ret))
+            ret=ret-1
+        self.get_logger().info("Successful connection to service \'{}\'.".format('add_perception_module'))
+
+        req=AddPerceptionModule.Request()
+        req.name=self.detector_name
+        req.type=self.detector_type
+        req.architecture=self.detector_architecture
+        self.get_logger().info("Sending request...")
+        self.fut_val=self.cli.call_async(req)
+        return True
+
+    def get_callback_time(self):
+        return self.pre_processing_tim.t + self.inference_tim.t + self.nms_tim.t + self.post_processing_tim.t
+
+    def model_warmup(self):
+        """Pipeline warmup"""
+        self.get_logger().info('Model warming up...')
+
+    def load_dataloader(self):
+        """Load the dataloader"""
+        self.get_logger().info('Initializing dataloader...')
+        return False
+
+    def __shutdown__(self):
+        self.get_logger().fatal("Shutting down node!")
+        #self.destroy_node()
+
+    def setup_detector(self): # Return True when done!
+        """
+            Detector initialization: \n
+            1. Checks the runtime device [chech_device()] \n   
+            2. Load the model [load_model()] \n
+            3. Load the dataloader [load_dataloader()] \n
+            4. Model warmup [model_warmup()] \n
+        """
+
+        self.get_logger().info("Setting up detector...")
+        
+        # Check device
+        if self.chech_device(): # Return True when an error occurs
+            self.get_logger().fatal("Device not defined!")
+            self.__shutdown_node=True
+            return False
+        self.get_logger().info("Runtime device ok")
+        
+        # Load model
+        if self.load_model(): # Return True when an error occurs
+            self.get_logger().fatal("Model file not defined!")
+            self.__shutdown_node=True
+            return False
+        self.get_logger().info("Model ok")
+        
+        # Load dataloader
+        if self.load_dataloader(): # Return True when an error occurs
+            self.get_logger().fatal("Dataloader Error!")
+            self.__shutdown_node=True
+            return False
+        self.get_logger().info('Dataloader: ok')
+        
+        # Model Warmup
+        self.model_warmup()
+        self.get_logger().info('Warm up complete')
+
+        self.get_logger().info('Detector setup complete')
+
+        return True
+
+    def chech_device(self): # Return True when an error occurs
+        if self.device is None:
+            return True
+        return False
+
+    def load_model(self): # Return True when an error occurs
+        if (self.model_file is None):
+            return True
+        if (self.model_description_file is None):
+            return True
+        self.get_logger().info("Loading Model {}\n{}...".format(self.model_file,self.model_description_file))
+        return False
     
     def initialization(self):
         self.get_logger().info("Initializing topics")
-        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.predict, 10,callback_group= self.reentrant_cb_group)
-        self.publisher=self.create_publisher(SmapPrediction, '/smap/perception/predictions', 10,callback_group= self.reentrant_cb_group)
+        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.predict, 10,callback_group= self._reentrant_cb_group)
+        self.publisher=self.create_publisher(SmapPrediction, '/smap/perception/predictions', 10,callback_group= self._reentrant_cb_group)
         return True
+
+    def on_process(self): # Pooling
+        if self.__shutdown_node:
+            self.__shutdown__()
+            return True
 
     def train(self,data):
         pass
 
     def predict(self,data):
-        #print(data)
+        self.get_logger().info('Model prediction')
         msg = SmapPrediction()
         msg.module_id=0
         self.publisher.publish(msg)
-
-    def _shutdown(self):
-        self.get_logger().fatal("Shutting down node!")
-        #self.destroy_node()
-
-    def on_process(self): # Pooling
-        if self.__shutdown_node:
-            self._shutdown()
-            return True
 
 def main(args=None,detector_class=classification_wrapper,detector_args={'name': 'classification_wrapper'}):
 
@@ -267,5 +306,5 @@ def main(args=None,detector_class=classification_wrapper,detector_args={'name': 
     rclpy.shutdown()
 
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
