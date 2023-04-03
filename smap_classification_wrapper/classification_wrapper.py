@@ -5,9 +5,8 @@ import traceback
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
-from smap_interfaces.msg import SmapData, SmapPrediction
+from smap_interfaces.msg import SmapData, SmapDetections
 
-from smap_interfaces.msg import SmapPrediction
 from smap_interfaces.srv import AddPerceptionModule
 
 import time
@@ -36,7 +35,7 @@ class timer:
 class classification_wrapper(Node):
 
     module_id = 0
-    classes = []
+    classes = [] # must be a dictionary of class names. (e.g.) {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle'}
     parameters = []
 
     imgsz=None
@@ -184,11 +183,14 @@ class classification_wrapper(Node):
                     self.get_logger().warning('Service not available [{}/10], waiting again...'.format(10-ret))
             ret=ret-1
         self.get_logger().info("Successful connection to service \'{}\'.".format('add_perception_module'))
-
         req=AddPerceptionModule.Request()
         req.name=self.detector_name
         req.type=self.detector_type
         req.architecture=self.detector_architecture
+        req.n_classes=len(self.classes.keys())
+        req.classes=list(self.classes.values())
+
+
         self.get_logger().info("Sending request...")
         self.fut_val=self.cli.call_async(req)
         return True
@@ -265,7 +267,7 @@ class classification_wrapper(Node):
     def initialization(self):
         self.get_logger().info("Initializing topics")
         self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.predict, 10,callback_group= self._reentrant_cb_group)
-        self.publisher=self.create_publisher(SmapPrediction, '/smap/perception/predictions', 10,callback_group= self._reentrant_cb_group)
+        self.publisher=self.create_publisher(SmapDetections, '/smap/perception/predictions', 10,callback_group= self._reentrant_cb_group)
         return True
 
     def on_process(self): # Pooling
@@ -278,7 +280,7 @@ class classification_wrapper(Node):
 
     def predict(self,data):
         self.get_logger().info('Model prediction')
-        msg = SmapPrediction()
+        msg = SmapDetections()
         msg.module_id=0
         self.publisher.publish(msg)
 
