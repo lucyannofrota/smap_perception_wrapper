@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(smap_classification_wrapper)
+project(smap_perception_wrapper)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)

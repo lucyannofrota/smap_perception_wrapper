@@ -32,7 +32,7 @@ class timer:
     def reset(self):
         self.t = 0
 
-class classification_wrapper(Node):
+class perception_wrapper(Node):
 
     module_id = 0
     classes = [] # must be a dictionary of class names. (e.g.) {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle'}
@@ -317,7 +317,7 @@ class classification_wrapper(Node):
         im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
         return im, ratio, (dw, dh)
 
-def main(args=None,detector_class=classification_wrapper,detector_args={'name': 'classification_wrapper'}):
+def main(args=None,detector_class=perception_wrapper,detector_args={'name': 'perception_wrapper'}):
 
     rclpy.init(args=args)
 
