@@ -5,7 +5,7 @@ import traceback
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
-from smap_interfaces.msg import SmapData, SmapDetections
+from smap_interfaces.msg import SmapData, SmapObject, SmapDetections
 
 from smap_interfaces.srv import AddPerceptionModule
 
@@ -267,7 +267,7 @@ class perception_wrapper(Node):
     def initialization(self):
         self.get_logger().info("Initializing topics")
         self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.predict, 10,callback_group= self._reentrant_cb_group)
-        self.publisher=self.create_publisher(SmapDetections, '/smap/perception/predictions', 10,callback_group= self._reentrant_cb_group)
+        self.detections=self.create_publisher(SmapDetections, '/smap_core/perception/modules/predictions', 10,callback_group= self._reentrant_cb_group)
         return True
 
     def on_process(self): # Pooling
