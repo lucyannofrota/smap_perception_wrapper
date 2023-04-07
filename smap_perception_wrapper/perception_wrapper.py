@@ -167,10 +167,10 @@ class perception_wrapper(Node):
         """Send a request to the server to include a new perception module"""
         self.cli = self.create_client(
             AddPerceptionModule,
-            "add_perception_module"
+            "/smap_core/perception_server/add_perception_module"
         )
         ret=10
-        self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,'add_perception_module'))
+        self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,'/smap_core/perception_server/add_perception_module'))
         while not self.cli.wait_for_service(timeout_sec=1.0):
             if ret==10:
                 self.get_logger().warning('Service not available, waiting again...')
@@ -182,7 +182,7 @@ class perception_wrapper(Node):
                 else:
                     self.get_logger().warning('Service not available [{}/10], waiting again...'.format(10-ret))
             ret=ret-1
-        self.get_logger().info("Successful connection to service \'{}\'.".format('add_perception_module'))
+        self.get_logger().info("Successful connection to service \'{}\'.".format('/smap_core/perception_server/add_perception_module'))
         req=AddPerceptionModule.Request()
         req.name=self.detector_name
         req.type=self.detector_type
