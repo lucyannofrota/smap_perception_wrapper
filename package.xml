@@ -13,10 +13,12 @@
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>sensor_msgs_py</depend>
   <depend>smap_interfaces</depend>
   <depend>python-numpy</depend>
   <depend>cv_bridge</depend>
   <depend>libopencv-dev</depend>
+  
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>

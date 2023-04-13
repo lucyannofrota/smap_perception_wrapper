@@ -9,10 +9,18 @@ from smap_interfaces.msg import SmapData, SmapObject, SmapDetections
 
 from smap_interfaces.srv import AddPerceptionModule
 
+from sensor_msgs.msg import PointCloud2, PointField
 import time
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
+
+from sensor_msgs.msg import PointCloud2
+
+import struct
+import ctypes
+
+xyzrgba_struct = struct.Struct('<ffff')
 
 
 class timer:
@@ -31,6 +39,8 @@ class timer:
     
     def reset(self):
         self.t = 0
+
+a = timer()
 
 class perception_wrapper(Node):
 
@@ -266,8 +276,9 @@ class perception_wrapper(Node):
     
     def initialization(self):
         self.get_logger().info("Initializing topics")
-        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.predict, 10,callback_group= self._reentrant_cb_group)
+        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.__predict, 10,callback_group= self._reentrant_cb_group)
         self.detections=self.create_publisher(SmapDetections, '/smap_core/perception/modules/predictions', 10,callback_group= self._reentrant_cb_group)
+        self.obj1=self.create_publisher(PointCloud2, '/smap_core/perception/obj1', 10,callback_group= self._reentrant_cb_group)
         return True
 
     def on_process(self): # Pooling
@@ -316,6 +327,57 @@ class perception_wrapper(Node):
         left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
         im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
         return im, ratio, (dw, dh)
+    
+    def __predict(self,input):
+
+        resp_msg = self.predict(input)
+        resp_msg.module_id = self.module_id
+        resp_msg.rgb_image = input.rgb_image
+        resp_msg.pointcloud = input.pointcloud
+        self.detections.publish(resp_msg)
+
+        # Segmentation
+        # with a:
+
+        #     # Set module id
+        #     resp_msg.module_id = self.module_id
+
+        #     # Set reference image
+        #     resp_msg.rgb_image = input.rgb_image
+
+        #     # Extract segments of the pointcloud
+        #     for obj in resp_msg.objects:
+        #         obj.obj_pointcloud.header = input.pointcloud.header
+        #         obj.obj_pointcloud.fields = input.pointcloud.fields
+        #         obj.obj_pointcloud.is_bigendian = input.pointcloud.is_bigendian
+        #         obj.obj_pointcloud.is_dense = input.pointcloud.is_dense
+
+        #         obj.obj_pointcloud.width = int(obj.bounding_box_2d.keypoint_2[0] - obj.bounding_box_2d.keypoint_1[0]+1)
+        #         obj.obj_pointcloud.height = int(obj.bounding_box_2d.keypoint_2[1] - obj.bounding_box_2d.keypoint_1[1]+1)
+        #         obj.obj_pointcloud.point_step = input.pointcloud.point_step
+        #         obj.obj_pointcloud.row_step = obj.obj_pointcloud.width * obj.obj_pointcloud.point_step
+                
+        #         buff = ctypes.create_string_buffer(xyzrgba_struct.size * obj.obj_pointcloud.width * obj.obj_pointcloud.height)
+
+        #         offset=0
+        #         for h in range(obj.bounding_box_2d.keypoint_1[1],obj.bounding_box_2d.keypoint_2[1]+1):
+        #             for w in range(obj.bounding_box_2d.keypoint_1[0],obj.bounding_box_2d.keypoint_2[0]+1):
+        #                 xyzrgba_struct.pack_into(
+        #                     buff,
+        #                     offset,
+        #                     *xyzrgba_struct.unpack_from(input.pointcloud.data, (input.pointcloud.row_step * h) + (input.pointcloud.point_step * w))
+        #                 )
+        #                 offset+=xyzrgba_struct.size
+
+        #         obj.obj_pointcloud.data = buff.raw
+
+
+        #         self.obj1.publish(obj.obj_pointcloud)
+
+
+        #     self.detections.publish(resp_msg)
+        # self.get_logger().debug(f'Seg time: %.1fms' % a.t)
+
 
 def main(args=None,detector_class=perception_wrapper,detector_args={'name': 'perception_wrapper'}):
 
