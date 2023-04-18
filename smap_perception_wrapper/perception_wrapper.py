@@ -75,6 +75,7 @@ class perception_wrapper(Node):
 
         # Wrapper private variables
         self._reentrant_cb_group=ReentrantCallbackGroup()
+        self._mutuallyexclusive_cb_group=MutuallyExclusiveCallbackGroup()
         self.__ret_valid=10
         self.__shutdown_node=False
 
@@ -276,8 +277,8 @@ class perception_wrapper(Node):
     
     def initialization(self):
         self.get_logger().info("Initializing topics")
-        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.__predict, 10,callback_group= self._reentrant_cb_group)
-        self.detections=self.create_publisher(SmapDetections, '/smap_core/perception/modules/predictions', 10,callback_group= self._reentrant_cb_group)
+        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.__predict, 10,callback_group=self._mutuallyexclusive_cb_group)
+        self.detections=self.create_publisher(SmapDetections, '/smap_core/perception/modules/predictions', 10,callback_group=self._reentrant_cb_group)
         self.obj1=self.create_publisher(PointCloud2, '/smap_core/perception/obj1', 10,callback_group= self._reentrant_cb_group)
         return True
 
@@ -329,12 +330,20 @@ class perception_wrapper(Node):
         return im, ratio, (dw, dh)
     
     def __predict(self,input):
-
-        resp_msg = self.predict(input)
-        resp_msg.module_id = self.module_id
-        resp_msg.rgb_image = input.rgb_image
-        resp_msg.pointcloud = input.pointcloud
-        self.detections.publish(resp_msg)
+        
+        try:
+            resp_msg = self.predict(input)
+        except Exception as e:
+            self.get_logger().error("perception_wrapper/predict")
+            print(e)
+            return
+        
+        if resp_msg:
+            resp_msg.module_id = self.module_id
+            resp_msg.rgb_image = input.rgb_image
+            resp_msg.pointcloud = input.pointcloud
+            self.detections.publish(resp_msg)
+        
 
         # Segmentation
         # with a:
