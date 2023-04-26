@@ -339,6 +339,16 @@ class perception_wrapper(Node):
             return
         
         if resp_msg:
+            for obj in resp_msg.objects:
+                if obj.bounding_box_2d.keypoint_1[0] < 0:
+                    obj.bounding_box_2d.keypoint_1[0] = 0
+                if obj.bounding_box_2d.keypoint_1[1] < 0:
+                    obj.bounding_box_2d.keypoint_1[1] = 0
+                
+                if obj.bounding_box_2d.keypoint_2[0] > input.rgb_image.width-1:
+                    obj.bounding_box_2d.keypoint_2[0] = input.rgb_image.width-1
+                if obj.bounding_box_2d.keypoint_2[1] > input.rgb_image.height-1:
+                    obj.bounding_box_2d.keypoint_2[1] = input.rgb_image.height-1
             resp_msg.module_id = self.module_id
             resp_msg.rgb_image = input.rgb_image
             resp_msg.pointcloud = input.pointcloud
