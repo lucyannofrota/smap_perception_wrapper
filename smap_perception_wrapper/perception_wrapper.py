@@ -5,7 +5,7 @@ import traceback
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
-from smap_interfaces.msg import SmapData, SmapObject, SmapDetections
+from smap_interfaces.msg import SmapData, SmapDetections
 
 from smap_interfaces.srv import AddPerceptionModule
 
@@ -352,6 +352,7 @@ class perception_wrapper(Node):
             resp_msg.module_id = self.module_id
             resp_msg.rgb_image = input.rgb_image
             resp_msg.pointcloud = input.pointcloud
+            resp_msg.robot_to_map = input.robot_to_map 
             self.detections.publish(resp_msg)
         
 
