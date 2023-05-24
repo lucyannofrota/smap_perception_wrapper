@@ -184,7 +184,7 @@ class perception_wrapper(Node):
         self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,'/smap_core/perception_server/add_perception_module'))
         while not self.cli.wait_for_service(timeout_sec=1.0):
             if ret==10:
-                self.get_logger().warning('Service not available, waiting again...')
+                self.get_logger().warning('Service not available, trying again...')
             else:
                 if ret==-1:
                     self.get_logger().error("Service not available!")
