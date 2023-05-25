@@ -65,7 +65,7 @@ class perception_wrapper(Node):
     
 
     def __init__(self,detector_name='Cl1',detector_type='object',detector_architecture='no_defined'):
-        super().__init__("smap_perception_{}".format(detector_name))
+        super().__init__("perception_{}".format(detector_name))
 
         self.get_logger().info("Initializing smap wrapper...")
 
@@ -178,10 +178,10 @@ class perception_wrapper(Node):
         """Send a request to the server to include a new perception module"""
         self.cli = self.create_client(
             AddPerceptionModule,
-            "/smap_core/perception_server/add_perception_module"
+            self.get_namespace()+"/perception_server/add_perception_module"
         )
         ret=10
-        self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,'/smap_core/perception_server/add_perception_module'))
+        self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,self.get_namespace()+"/perception_server/add_perception_module"))
         while not self.cli.wait_for_service(timeout_sec=1.0):
             if ret==10:
                 self.get_logger().warning('Service not available, trying again...')
@@ -193,7 +193,7 @@ class perception_wrapper(Node):
                 else:
                     self.get_logger().warning('Service not available [{}/10], waiting again...'.format(10-ret))
             ret=ret-1
-        self.get_logger().info("Successful connection to service \'{}\'.".format('/smap_core/perception_server/add_perception_module'))
+        self.get_logger().info("Successful connection to service \'{}\'.".format(self.get_namespace()+"/perception_server/add_perception_module"))
         req=AddPerceptionModule.Request()
         req.name=self.detector_name
         req.type=self.detector_type
@@ -277,9 +277,8 @@ class perception_wrapper(Node):
     
     def initialization(self):
         self.get_logger().info("Initializing topics")
-        self.subscription=self.create_subscription(SmapData, '/smap/sampler/data', self.__predict, 10,callback_group=self._mutuallyexclusive_cb_group)
-        self.detections=self.create_publisher(SmapDetections, '/smap_core/perception/modules/predictions', 10,callback_group=self._reentrant_cb_group)
-        self.obj1=self.create_publisher(PointCloud2, '/smap_core/perception/obj1', 10,callback_group= self._reentrant_cb_group)
+        self.subscription=self.create_subscription(SmapData, self.get_namespace()+'/sampler/data', self.__predict, 10,callback_group=self._mutuallyexclusive_cb_group)
+        self.detections=self.create_publisher(SmapDetections, self.get_namespace()+'/perception/predictions', 10,callback_group=self._reentrant_cb_group)
         return True
 
     def on_process(self): # Pooling
