@@ -339,15 +339,15 @@ class perception_wrapper(Node):
         
         if resp_msg:
             for obj in resp_msg.objects:
-                if obj.bounding_box_2d.keypoint_1[0] < 0:
-                    obj.bounding_box_2d.keypoint_1[0] = 0
-                if obj.bounding_box_2d.keypoint_1[1] < 0:
-                    obj.bounding_box_2d.keypoint_1[1] = 0
+                if obj.bb_2d.keypoint_1[0] < 0:
+                    obj.bb_2d.keypoint_1[0] = 0
+                if obj.bb_2d.keypoint_1[1] < 0:
+                    obj.bb_2d.keypoint_1[1] = 0
                 
-                if obj.bounding_box_2d.keypoint_2[0] > input.rgb_image.width-1:
-                    obj.bounding_box_2d.keypoint_2[0] = input.rgb_image.width-1
-                if obj.bounding_box_2d.keypoint_2[1] > input.rgb_image.height-1:
-                    obj.bounding_box_2d.keypoint_2[1] = input.rgb_image.height-1
+                if obj.bb_2d.keypoint_2[0] > input.rgb_image.width-1:
+                    obj.bb_2d.keypoint_2[0] = input.rgb_image.width-1
+                if obj.bb_2d.keypoint_2[1] > input.rgb_image.height-1:
+                    obj.bb_2d.keypoint_2[1] = input.rgb_image.height-1
             resp_msg.module_id = self.module_id
             resp_msg.rgb_image = input.rgb_image
             resp_msg.pointcloud = input.pointcloud
@@ -371,16 +371,16 @@ class perception_wrapper(Node):
         #         obj.obj_pointcloud.is_bigendian = input.pointcloud.is_bigendian
         #         obj.obj_pointcloud.is_dense = input.pointcloud.is_dense
 
-        #         obj.obj_pointcloud.width = int(obj.bounding_box_2d.keypoint_2[0] - obj.bounding_box_2d.keypoint_1[0]+1)
-        #         obj.obj_pointcloud.height = int(obj.bounding_box_2d.keypoint_2[1] - obj.bounding_box_2d.keypoint_1[1]+1)
+        #         obj.obj_pointcloud.width = int(obj.bb_2d.keypoint_2[0] - obj.bb_2d.keypoint_1[0]+1)
+        #         obj.obj_pointcloud.height = int(obj.bb_2d.keypoint_2[1] - obj.bb_2d.keypoint_1[1]+1)
         #         obj.obj_pointcloud.point_step = input.pointcloud.point_step
         #         obj.obj_pointcloud.row_step = obj.obj_pointcloud.width * obj.obj_pointcloud.point_step
                 
         #         buff = ctypes.create_string_buffer(xyzrgba_struct.size * obj.obj_pointcloud.width * obj.obj_pointcloud.height)
 
         #         offset=0
-        #         for h in range(obj.bounding_box_2d.keypoint_1[1],obj.bounding_box_2d.keypoint_2[1]+1):
-        #             for w in range(obj.bounding_box_2d.keypoint_1[0],obj.bounding_box_2d.keypoint_2[0]+1):
+        #         for h in range(obj.bb_2d.keypoint_1[1],obj.bb_2d.keypoint_2[1]+1):
+        #             for w in range(obj.bb_2d.keypoint_1[0],obj.bb_2d.keypoint_2[0]+1):
         #                 xyzrgba_struct.pack_into(
         #                     buff,
         #                     offset,
