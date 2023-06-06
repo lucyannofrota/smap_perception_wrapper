@@ -200,6 +200,7 @@ class perception_wrapper(Node):
         req.architecture=self.detector_architecture
         req.n_classes=len(self.classes.keys())
         req.classes=list(self.classes.values())
+        req.class_ids = list(self.classes.keys())
 
 
         self.get_logger().info("Sending request...")
