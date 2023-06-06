@@ -146,7 +146,7 @@ class perception_wrapper(Node):
             try:
                 resp=self.fut_val.result()
             except Exception as e:
-                self.get_logger().error("Add detector request faild!")
+                self.get_logger().error("Add detector request failed!")
                 self.__shutdown_node=True
                 return False
         else:
@@ -166,7 +166,7 @@ class perception_wrapper(Node):
         self.get_logger().info("Processing service response.")
 
         if not resp.success:
-            self.get_logger().error("Add detector request faild!")
+            self.get_logger().error("Add detector request failed!")
             self.__shutdown_node=True
             return False
         
@@ -225,7 +225,7 @@ class perception_wrapper(Node):
     def setup_detector(self): # Return True when done!
         """
             Detector initialization: \n
-            1. Checks the runtime device [chech_device()] \n   
+            1. Checks the runtime device [check_device()] \n   
             2. Load the model [load_model()] \n
             3. Load the dataloader [load_dataloader()] \n
             4. Model warmup [model_warmup()] \n
@@ -234,7 +234,7 @@ class perception_wrapper(Node):
         self.get_logger().info("Setting up detector...")
         
         # Check device
-        if self.chech_device(): # Return True when an error occurs
+        if self.check_device(): # Return True when an error occurs
             self.get_logger().fatal("Device not defined!")
             self.__shutdown_node=True
             return False
@@ -262,7 +262,7 @@ class perception_wrapper(Node):
 
         return True
 
-    def chech_device(self): # Return True when an error occurs
+    def check_device(self): # Return True when an error occurs
         if self.device is None:
             return True
         return False
@@ -295,7 +295,7 @@ class perception_wrapper(Node):
         msg.module_id=0
         self.publisher.publish(msg)
 
-    def letterbox(self,im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
+    def letterbox(self,im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleUp=True, stride=32):
         # https://github.com/ultralytics/yolov5/blob/master/utils/augmentations.py
         # Resize and pad image while meeting stride-multiple constraints
         shape = im.shape[:2]  # current shape [height, width]
@@ -304,7 +304,7 @@ class perception_wrapper(Node):
 
         # Scale ratio (new / old)
         r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
-        if not scaleup:  # only scale down, do not scale up (for better val mAP)
+        if not scaleUp:  # only scale down, do not scale up (for better val mAP)
             r = min(r, 1.0)
 
         # Compute padding
@@ -366,17 +366,17 @@ class perception_wrapper(Node):
 
         #     # Extract segments of the pointcloud
         #     for obj in resp_msg.objects:
-        #         obj.obj_pointcloud.header = input.pointcloud.header
-        #         obj.obj_pointcloud.fields = input.pointcloud.fields
-        #         obj.obj_pointcloud.is_bigendian = input.pointcloud.is_bigendian
-        #         obj.obj_pointcloud.is_dense = input.pointcloud.is_dense
+        #         obj.pointcloud.header = input.pointcloud.header
+        #         obj.pointcloud.fields = input.pointcloud.fields
+        #         obj.pointcloud.is_bigendian = input.pointcloud.is_bigendian
+        #         obj.pointcloud.is_dense = input.pointcloud.is_dense
 
-        #         obj.obj_pointcloud.width = int(obj.bb_2d.keypoint_2[0] - obj.bb_2d.keypoint_1[0]+1)
-        #         obj.obj_pointcloud.height = int(obj.bb_2d.keypoint_2[1] - obj.bb_2d.keypoint_1[1]+1)
-        #         obj.obj_pointcloud.point_step = input.pointcloud.point_step
-        #         obj.obj_pointcloud.row_step = obj.obj_pointcloud.width * obj.obj_pointcloud.point_step
+        #         obj.pointcloud.width = int(obj.bb_2d.keypoint_2[0] - obj.bb_2d.keypoint_1[0]+1)
+        #         obj.pointcloud= int(obj.bb_2d.keypoint_2[1] - obj.bb_2d.keypoint_1[1]+1)
+        #         obj.pointcloud.point_step = input.pointcloud.point_step
+        #         obj.pointcloud.row_step = obj.pointcloud.width * obj.pointcloud.point_step
                 
-        #         buff = ctypes.create_string_buffer(xyzrgba_struct.size * obj.obj_pointcloud.width * obj.obj_pointcloud.height)
+        #         buff = ctypes.create_string_buffer(xyzrgba_struct.size * obj.pointcloud.width * obj.pointcloud.height)
 
         #         offset=0
         #         for h in range(obj.bb_2d.keypoint_1[1],obj.bb_2d.keypoint_2[1]+1):
@@ -388,10 +388,10 @@ class perception_wrapper(Node):
         #                 )
         #                 offset+=xyzrgba_struct.size
 
-        #         obj.obj_pointcloud.data = buff.raw
+        #         obj.pointcloud.data = buff.raw
 
 
-        #         self.obj1.publish(obj.obj_pointcloud)
+        #         self.obj1.publish(obj.pointcloud)
 
 
         #     self.detections.publish(resp_msg)
@@ -414,10 +414,10 @@ def main(args=None,detector_class=perception_wrapper,detector_args={'name': 'per
                 executor.shutdown(0)
                 rclpy.shutdown()
                 return
-        except Exception as exeption:
+        except Exception as exception:
             traceback_logger_node = Node('node_class_traceback_logger')
             traceback_logger_node.get_logger().error(traceback.format_exc())
-            raise exeption
+            raise exception
 
     detector_obj.destroy_node()
     executor.shutdown()
