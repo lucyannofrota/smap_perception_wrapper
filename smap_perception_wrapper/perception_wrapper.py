@@ -352,6 +352,7 @@ class perception_wrapper(Node):
             resp_msg.module_id = self.module_id
             resp_msg.rgb_image = input.rgb_image
             resp_msg.pointcloud = input.pointcloud
+            resp_msg.stamped_pose = input.stamped_pose
             resp_msg.robot_to_map = input.robot_to_map 
             self.detections.publish(resp_msg)
         
