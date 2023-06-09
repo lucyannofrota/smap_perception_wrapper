@@ -180,19 +180,19 @@ class perception_wrapper(Node):
             AddPerceptionModule,
             self.get_namespace()+"/perception_server/add_perception_module"
         )
-        ret=10
+        # ret=10
         self.get_logger().info("smap wrapper wainting for service \'{}\'".format(self.detector_name,self.get_namespace()+"/perception_server/add_perception_module"))
-        while not self.cli.wait_for_service(timeout_sec=1.0):
-            if ret==10:
-                self.get_logger().warning('Service not available, trying again...')
-            else:
-                if ret==-1:
-                    self.get_logger().error("Service not available!")
-                    self.__shutdown_node=True
-                    return False
-                else:
-                    self.get_logger().warning('Service not available [{}/10], waiting again...'.format(10-ret))
-            ret=ret-1
+        while not self.cli.wait_for_service(timeout_sec=5.0):
+            # if ret==10:
+            self.get_logger().warning('Service not available, trying again...')
+            # else:
+            #     if ret==-1:
+            #         self.get_logger().error("Service not available!")
+            #         self.__shutdown_node=True
+            #         return False
+            #     else:
+            #         self.get_logger().warning('Service not available, trying again...')
+            # ret=ret-1
         self.get_logger().info("Successful connection to service \'{}\'.".format(self.get_namespace()+"/perception_server/add_perception_module"))
         req=AddPerceptionModule.Request()
         req.name=self.detector_name
