@@ -70,6 +70,7 @@ class perception_wrapper(Node):
         self.get_logger().info("Initializing smap wrapper...")
 
         # Wrapper parameters
+        self.detector_name = detector_name
         self.declare_parameter('model',value=None)
         self.declare_parameter('model_description',value=None)
 
