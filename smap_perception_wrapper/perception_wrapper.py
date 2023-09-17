@@ -279,8 +279,8 @@ class perception_wrapper(Node):
     
     def initialization(self):
         self.get_logger().info("Initializing topics")
-        self.subscription=self.create_subscription(SmapData, self.get_namespace()+'/sampler/data', self.__predict, 10,callback_group=self._mutuallyexclusive_cb_group)
-        self.detections=self.create_publisher(SmapDetections, self.get_namespace()+'/perception/predictions', 10,callback_group=self._reentrant_cb_group)
+        self.subscription=self.create_subscription(SmapData, self.get_namespace()+'/sampler/data', self.__predict, 2,callback_group=self._mutuallyexclusive_cb_group)
+        self.detections=self.create_publisher(SmapDetections, self.get_namespace()+'/perception/predictions', 2,callback_group=self._reentrant_cb_group)
         return True
 
     def on_process(self): # Pooling
