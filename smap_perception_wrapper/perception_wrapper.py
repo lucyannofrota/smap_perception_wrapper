@@ -15,6 +15,8 @@ import cv2
 import numpy as np
 from cv_bridge import CvBridge
 import os
+from pathlib import Path
+import atexit
 
 from sensor_msgs.msg import PointCloud2
 
@@ -42,6 +44,7 @@ class timer:
         self.t = (self.end - self.start)*1E3
         if(self.__counter < self.__max_samples):
             self.t_history[self.__counter] = self.t
+            self.__counter+=1
 
     def export(self,file_name):
         with open(file_name, 'w') as f:
@@ -107,17 +110,19 @@ class perception_wrapper(Node):
         self.nms_tim=timer()
         self.post_processing_tim=timer()
         self.total_processing_tim=timer()
+
+        atexit.register(self.export_log)
         
-    def __del__(self):
-        folder_name = '../../timers/{name}'.format(name=self.detector_name)
+    def export_log(self):
+        folder_name = str(Path().absolute())+'/timers/{name}'.format(name=self.detector_name)
         if not os.path.exists(folder_name):
             # Create a new directory because it does not exist
-            os.makedirs(path)
-        self.pre_processing_tim.export(folder_name+'pre_processing_tim.txt')
-        self.inference_tim.export(folder_name+'inference_tim.txt')
-        self.nms_tim.export(folder_name+'nms_tim.txt')
-        self.post_processing_tim.export(folder_name+'post_processing_tim.txt')
-        self.total_processing_tim.export(folder_name+'total_processing_tim.txt')
+            os.makedirs(folder_name)
+        self.pre_processing_tim.export(folder_name+'/pre_processing_tim.txt')
+        self.inference_tim.export(folder_name+'/inference_tim.txt')
+        self.nms_tim.export(folder_name+'/nms_tim.txt')
+        self.post_processing_tim.export(folder_name+'/post_processing_tim.txt')
+        self.total_processing_tim.export(folder_name+'/total_processing_tim.txt')
 
     def __states_next__(self):
         # Initialization:
