@@ -27,6 +27,9 @@ class timer:
     # Timer based on https://github.com/ultralytics/yolov5/blob/master/utils/general.py
     def __init__(self):
         self.t = 0
+        self.__max_samples = 8193
+        self.__counter = 0
+        self.t_history = np.zeros(self.__max_samples)
 
     def __enter__(self):
         self.t = 0
@@ -36,6 +39,14 @@ class timer:
     def __exit__(self, type, value, traceback):
         self.end = time.time()
         self.t = (self.end - self.start)*1E3
+        if(self.__counter < self.__max_samples):
+            self.t_history[self.__counter] = self.t
+
+    def export(self,file_name):
+        with open(file_name, 'w') as f:
+            f.write("Exec Times in nanonseconds [ms] | [samples:{}]\n".format(self.__counter))
+            for value in self.t_history:
+                f.write(str(value)+'\n')
     
     def reset(self):
         self.t = 0
@@ -94,6 +105,15 @@ class perception_wrapper(Node):
         self.inference_tim=timer()
         self.nms_tim=timer()
         self.post_processing_tim=timer()
+        self.total_processing_tim=timer()
+        
+    def __del__(self):
+        folder_name = '../../timers/{name}'.format(name=self.detector_name)
+        self.pre_processing_tim.export(folder_name+'pre_processing_tim.txt')
+        self.inference_tim.export(folder_name+'inference_tim.txt')
+        self.nms_tim.export(folder_name+'nms_tim.txt')
+        self.post_processing_tim.export(folder_name+'post_processing_tim.txt')
+        self.total_processing_tim.export(folder_name+'total_processing_tim.txt')
 
     def __states_next__(self):
         # Initialization:
