@@ -14,6 +14,7 @@ import time
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
+import os
 
 from sensor_msgs.msg import PointCloud2
 
@@ -109,6 +110,9 @@ class perception_wrapper(Node):
         
     def __del__(self):
         folder_name = '../../timers/{name}'.format(name=self.detector_name)
+        if not os.path.exists(folder_name):
+            # Create a new directory because it does not exist
+            os.makedirs(path)
         self.pre_processing_tim.export(folder_name+'pre_processing_tim.txt')
         self.inference_tim.export(folder_name+'inference_tim.txt')
         self.nms_tim.export(folder_name+'nms_tim.txt')
