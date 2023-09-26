@@ -365,6 +365,7 @@ class perception_wrapper(Node):
     def __reboot(self,msg):
         if(self.__initialization_state >= 4):
             self.get_logger().warning("Reboot requested")
+            self.export_log()
             self.__initialization_state = 1
 
     def __predict(self,input):
@@ -394,49 +395,7 @@ class perception_wrapper(Node):
             resp_msg.stamped_pose = input.stamped_pose
             resp_msg.camera_to_map = input.camera_to_map 
             self.detections.publish(resp_msg)
-        
 
-        # Segmentation
-        # with a:
-
-        #     # Set module id
-        #     resp_msg.module_id = self.module_id
-
-        #     # Set reference image
-        #     resp_msg.rgb_image = input.rgb_image
-
-        #     # Extract segments of the pointcloud
-        #     for obj in resp_msg.objects:
-        #         obj.pointcloud.header = input.pointcloud.header
-        #         obj.pointcloud.fields = input.pointcloud.fields
-        #         obj.pointcloud.is_bigendian = input.pointcloud.is_bigendian
-        #         obj.pointcloud.is_dense = input.pointcloud.is_dense
-
-        #         obj.pointcloud.width = int(obj.bb_2d.keypoint_2[0] - obj.bb_2d.keypoint_1[0]+1)
-        #         obj.pointcloud= int(obj.bb_2d.keypoint_2[1] - obj.bb_2d.keypoint_1[1]+1)
-        #         obj.pointcloud.point_step = input.pointcloud.point_step
-        #         obj.pointcloud.row_step = obj.pointcloud.width * obj.pointcloud.point_step
-                
-        #         buff = ctypes.create_string_buffer(xyzrgba_struct.size * obj.pointcloud.width * obj.pointcloud.height)
-
-        #         offset=0
-        #         for h in range(obj.bb_2d.keypoint_1[1],obj.bb_2d.keypoint_2[1]+1):
-        #             for w in range(obj.bb_2d.keypoint_1[0],obj.bb_2d.keypoint_2[0]+1):
-        #                 xyzrgba_struct.pack_into(
-        #                     buff,
-        #                     offset,
-        #                     *xyzrgba_struct.unpack_from(input.pointcloud.data, (input.pointcloud.row_step * h) + (input.pointcloud.point_step * w))
-        #                 )
-        #                 offset+=xyzrgba_struct.size
-
-        #         obj.pointcloud.data = buff.raw
-
-
-        #         self.obj1.publish(obj.pointcloud)
-
-
-        #     self.detections.publish(resp_msg)
-        # self.get_logger().debug(f'Seg time: %.1fms' % a.t)
 
 
 def main(args=None,detector_class=perception_wrapper,detector_args={'name': 'perception_wrapper'}):
