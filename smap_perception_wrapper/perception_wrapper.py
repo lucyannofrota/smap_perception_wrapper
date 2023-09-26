@@ -9,6 +9,8 @@ from smap_interfaces.msg import SmapData, SmapDetections
 
 from smap_interfaces.srv import AddPerceptionModule
 
+
+from std_msgs.msg import Empty
 from sensor_msgs.msg import PointCloud2, PointField
 import time
 import cv2
@@ -310,6 +312,7 @@ class perception_wrapper(Node):
         self.get_logger().info("Initializing topics")
         self.subscription=self.create_subscription(SmapData, self.get_namespace()+'/sampler/data', self.__predict, 2,callback_group=self._mutuallyexclusive_cb_group)
         self.detections=self.create_publisher(SmapDetections, self.get_namespace()+'/perception/predictions', 2,callback_group=self._reentrant_cb_group)
+        self.reboot=self.create_subscription(Empty, self.get_namespace()+'/perception/reboot_detectors', self.__reboot, 10)
         return True
 
     def on_process(self): # Pooling
@@ -359,8 +362,14 @@ class perception_wrapper(Node):
         im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
         return im, ratio, (dw, dh)
     
+    def __reboot(self,msg):
+        if(self.__initialization_state >= 4):
+            self.get_logger().warning("Reboot requested")
+            self.__initialization_state = 1
+
     def __predict(self,input):
-        
+        if self.__initialization_state < 4:
+            return
         try:
             resp_msg = self.predict(input)
         except Exception as e:
