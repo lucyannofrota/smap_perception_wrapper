@@ -366,6 +366,11 @@ class perception_wrapper(Node):
         if(self.__initialization_state >= 4):
             self.get_logger().warning("Reboot requested")
             self.export_log()
+            self.pre_processing_tim=timer()
+            self.inference_tim=timer()
+            self.nms_tim=timer()
+            self.post_processing_tim=timer()
+            self.total_processing_tim=timer()
             self.__initialization_state = 1
 
     def __predict(self,input):
